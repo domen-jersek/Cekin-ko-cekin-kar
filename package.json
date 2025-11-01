@@ -1,0 +1,20 @@
+{
+  "name": "cekincko_cekinckar",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "register": "node src/register-commands.js",
+    "check:google": "node src/check-google.js",
+    "test": "node -e \"require('fs').accessSync('src/index.js')\" && echo All good"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "discord.js": "^14.24.2",
+    "dotenv": "^17.2.3",
+    "googleapis": "^164.1.0"
+  }
+}

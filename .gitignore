@@ -1,0 +1,13 @@
+# Env and credentials
+.env
+config/credentials.json
+
+# Node
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+.DS_Store
+
+# Local service account key (do not commit)
+white-airship-476913-j2-5010959240f6.json
