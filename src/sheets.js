@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Single enforced schema: [nickname, username, cekincki]
-const NICKNAME_HEADER = ['nickname', 'username', 'cekincki'];
+const NICKNAME_HEADER = ['Server ime', 'Dejansko ime', 'Cekincki'];
 
 function getAuth() {
   // Prefer explicit path, then GOOGLE_APPLICATION_CREDENTIALS, then inline JSON
@@ -120,6 +120,8 @@ async function ensureHeader() {
     requestBody: { values: [NICKNAME_HEADER] },
   });
   console.log(`[sheets] Enforced header on '${sheetName}' as: ${NICKNAME_HEADER.join(', ')}`);
+  // Apply basic formatting to make the sheet easier to read
+  await applyBasicFormatting(sheets, spreadsheetId, sheetName).catch(() => {});
 }
 
 // Fixed columns: A=nickname, B=username, C=cekincki
@@ -197,12 +199,69 @@ async function upsertMemberRecord(member, value) {
   }
 }
 
+async function getSheetId(sheets, spreadsheetId, sheetName) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = (meta.data.sheets || []).find(s => s.properties && s.properties.title === sheetName);
+  return sheet?.properties?.sheetId;
+}
+
+async function applyBasicFormatting(sheets, spreadsheetId, sheetName) {
+  const sheetId = await getSheetId(sheets, spreadsheetId, sheetName);
+  if (sheetId == null) return;
+  const requests = [
+    // Freeze header row
+    {
+      updateSheetProperties: {
+        properties: { sheetId, gridProperties: { frozenRowCount: 1 } },
+        fields: 'gridProperties.frozenRowCount',
+      },
+    },
+    // Style header row
+    {
+      repeatCell: {
+        range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 3 },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: { red: 0.93, green: 0.93, blue: 0.93 },
+            textFormat: { bold: true },
+            horizontalAlignment: 'CENTER',
+          },
+        },
+        fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+      },
+    },
+    // Number format and alignment for C column (cekincki) for all data rows
+    {
+      repeatCell: {
+        range: { sheetId, startRowIndex: 1, startColumnIndex: 2, endColumnIndex: 3 },
+        cell: {
+          userEnteredFormat: {
+            numberFormat: { type: 'NUMBER', pattern: '0' },
+            horizontalAlignment: 'RIGHT',
+          },
+        },
+        fields: 'userEnteredFormat(numberFormat,horizontalAlignment)',
+      },
+    },
+    // Auto-resize columns A:C
+    {
+      autoResizeDimensions: {
+        dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 3 },
+      },
+    },
+  ];
+  await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
+  console.log(`[sheets] Applied basic formatting to '${sheetName}' (freeze header, style header, number format, auto-resize)`);
+}
+
 module.exports = {
   ensureHeader,
   readAll,
   upsertUser,
   bulkSyncMembers,
   upsertMemberRecord,
+  // formatting helpers
+  applyBasicFormatting,
   // for diagnostics
   getAuth,
   verifyGoogleCredentials,
