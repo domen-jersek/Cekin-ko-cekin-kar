@@ -25,8 +25,8 @@ const client = new Client({
   partials: [Partials.GuildMember],
 });
 
-// Track last seen cekinčki values by nickname to log detected sheet changes
-const lastValues = new Map(); // nickname -> value
+// Track last seen cekinčki values by username (Dejansko ime) to log detected sheet changes
+const lastValues = new Map(); // username -> value
 
 async function syncGuild(guild) {
   try {
@@ -46,24 +46,25 @@ async function syncGuild(guild) {
   const sheetSync = await bulkSyncMembers(members);
   console.log(`[sync] Sheet add missing: inserted ${sheetSync.inserted} of ${sheetSync.totalMembers}`);
 
-    // Read all values and apply roles
-    const { mapByNickname } = await readAll();
+    // Read all values and apply roles (lookup by username)
+    const { mapByUsername } = await readAll();
     let updated = 0;
-    // Match by nickname (display name). If duplicates, first match wins.
+    // Match by username (Dejansko ime). If duplicates somehow exist, first match wins.
     for (const member of guild.members.cache.values()) {
       if (member.user.bot) continue;
+      const uname = member.user?.tag || member.user?.username;
       const nick = member.displayName || member.user.username;
-      const entry = mapByNickname.get(nick);
+      const entry = uname ? mapByUsername.get(uname) : undefined;
       if (!entry) continue;
-      const prev = lastValues.get(nick);
+      const prev = lastValues.get(uname);
       if (prev !== undefined && prev !== entry.value) {
-        console.log(`[sheet] Value change detected for '${nick}': ${prev} -> ${entry.value}`);
+        console.log(`[sheet] Value change detected for '${uname}': ${prev} -> ${entry.value}`);
       }
-      lastValues.set(nick, entry.value);
+      lastValues.set(uname, entry.value);
       const res = await applyMemberValueRole(member, entry.value, prefix);
       if (res.changed) {
         const removed = res.removedNames && res.removedNames.length ? `, removed [${res.removedNames.join(', ')}]` : '';
-        console.log(`[roles] Updated '${nick}': now '${res.targetName}' (value ${entry.value})${removed}`);
+        console.log(`[roles] Updated '${uname}': now '${res.targetName}' (value ${entry.value})${removed}`);
         if (NOTIFY_ON_CHANGE && prev !== undefined && prev !== entry.value) {
           await notifyChange(guild, member, nick, prev, entry.value).catch(() => {});
         }

@@ -124,7 +124,7 @@ async function ensureHeader() {
   await applyBasicFormatting(sheets, spreadsheetId, sheetName).catch(() => {});
 }
 
-// Fixed columns: A=nickname, B=username, C=cekincki
+// Fixed columns: A=nickname, B=username (unique), C=cekincki
 
 async function readAll() {
   const sheets = await getSheets();
@@ -132,8 +132,9 @@ async function readAll() {
   await ensureSheetExists(sheets, spreadsheetId, sheetName);
   const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
   const rows = res.data.values || [];
-  // Map by nickname
+  // Maps
   const mapByNickname = new Map();
+  const mapByUsername = new Map();
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const nickname = row[0];
@@ -142,8 +143,9 @@ async function readAll() {
     const value = Number.parseInt(cekincki, 10);
     const entry = { username: username || '', nickname: nickname || '', value: Number.isFinite(value) ? value : 0, rowIndex: i + 1 };
     if (nickname) mapByNickname.set(nickname, entry);
+    if (username) mapByUsername.set(username, entry);
   }
-  return { rows, mapByNickname };
+  return { rows, mapByNickname, mapByUsername };
 }
 
 async function upsertUser(userId, username, value) {
@@ -157,15 +159,21 @@ async function upsertUser(userId, username, value) {
 async function bulkSyncMembers(members) {
   // members: array of { id, username, displayName }
   const sheets = await getSheets();
-  const { spreadsheetId, range, sheetName } = getSheetMeta();
+  const { spreadsheetId, range, sheetName, qSheet } = getSheetMeta();
   await ensureHeader();
-  const { mapByNickname } = await readAll();
+  const { mapByUsername } = await readAll();
   const rowsToAppend = [];
-  const existingNicks = new Set(mapByNickname.keys());
+  const nicknameUpdates = [];
   for (const m of members) {
     const nick = m.displayName || m.username;
-    if (nick && !existingNicks.has(nick)) {
-      rowsToAppend.push([nick, m.username, 0]);
+    const uname = m.username;
+    if (!uname) continue;
+    const existing = mapByUsername.get(uname);
+    if (!existing) {
+      rowsToAppend.push([nick || '', uname, 0]);
+    } else if (nick && existing.nickname !== nick) {
+      // Update nickname in column A if changed
+      nicknameUpdates.push({ rowIndex: existing.rowIndex, nickname: nick });
     }
   }
   if (rowsToAppend.length) {
@@ -177,19 +185,24 @@ async function bulkSyncMembers(members) {
       requestBody: { values: rowsToAppend },
     });
   }
-  return { inserted: rowsToAppend.length, totalMembers: members.length };
+  for (const upd of nicknameUpdates) {
+    const targetRange = `${qSheet}!A${upd.rowIndex}:A${upd.rowIndex}`;
+    await sheets.spreadsheets.values.update({ spreadsheetId, range: targetRange, valueInputOption: 'RAW', requestBody: { values: [[upd.nickname]] } });
+  }
+  return { inserted: rowsToAppend.length, updatedNicknames: nicknameUpdates.length, totalMembers: members.length };
 }
 
 async function upsertMemberRecord(member, value) {
   const sheets = await getSheets();
   const { spreadsheetId, range, sheetName, qSheet } = getSheetMeta();
   await ensureHeader();
-  const { mapByNickname } = await readAll();
+  const { mapByUsername } = await readAll();
   const nick = member.displayName || member.user?.username || member.username;
   const username = member.user?.tag || member.tag || member.username;
   const row = [nick, username, value != null ? Number(value) : 0];
-  if (mapByNickname.has(nick)) {
-    const { rowIndex } = mapByNickname.get(nick);
+  const existing = username ? mapByUsername.get(username) : null;
+  if (existing) {
+    const { rowIndex } = existing;
     const targetRange = `${qSheet}!A${rowIndex}:C${rowIndex}`;
     await sheets.spreadsheets.values.update({ spreadsheetId, range: targetRange, valueInputOption: 'RAW', requestBody: { values: [row] } });
     return { action: 'updated', rowIndex };
