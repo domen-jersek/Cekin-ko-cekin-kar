@@ -10,7 +10,7 @@ const SHEET_NAME = process.env.SHEET_NAME || 'cekincki';
 const NOTIFY_ON_CHANGE = String(process.env.NOTIFY_ON_CHANGE || 'true').toLowerCase() !== 'false';
 const NOTIFY_MODE = (process.env.NOTIFY_MODE || 'dm').toLowerCase();
 const NOTIFY_CHANNEL_ID = process.env.NOTIFY_CHANNEL_ID;
-const NOTIFY_TEMPLATE = process.env.NOTIFY_TEMPLATE || 'Tvoji čekinčki so se posodobili iz {old} na {new}.';
+const NOTIFY_TEMPLATE = process.env.NOTIFY_TEMPLATE || 'Yoooo legenda tvoji cekinčki so prešli iz {old} na {new}.';
 
 if (!TOKEN) {
   console.error('Missing DISCORD_TOKEN in env');
