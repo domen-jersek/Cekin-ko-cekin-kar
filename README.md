@@ -93,6 +93,44 @@ The bot logs in and will automatically:
 
 Below are practical options to run the bot in the cloud. Free tiers change over time; check provider pricing.
 
+### Option A: Discloud (Discord-bot hosting)
+
+Discloud hosts Discord bots and provides a simple config plus secrets management.
+
+What you need:
+
+- A Discloud account and the Discloud CLI
+- This repository with `discloud.config` (already included)
+- Your secrets set in Discloud (do NOT upload `.env`)
+
+Steps:
+
+1. Install and login
+   - https://docs.discloudbot.com/ (install CLI)
+   - discloud login (paste your Discloud token)
+2. Review `discloud.config`
+   - TYPE=bot
+   - MAIN=src/index.js
+   - RAM=512 (adjust as needed)
+3. Set environment variables (secrets) in Discloud UI or via CLI:
+   - DISCORD_TOKEN
+   - GUILD_ID
+   - SPREADSHEET_ID
+   - SHEET_NAME (e.g., `cekincki`)
+   - CEKINCKI_ROLE_PREFIX (e.g., `Cekinčki:`)
+   - SYNC_INTERVAL_SECONDS (e.g., `300`)
+   - NOTIFY_* (optional)
+   - GCP_CREDENTIALS_JSON (paste full Service Account JSON)
+4. Upload and start
+   - Zip or use CLI in this repo folder:
+     - discloud app create .
+     - or discloud app upload .
+   - Start from Discloud panel if not auto-started.
+
+Notes
+- Keep `.env` and credential files out of the upload. Use Discloud env variables instead.
+- Ensure your Google Sheet is shared with the service account email (`...iam.gserviceaccount.com`).
+
 ### Option A: Fly.io (small free allowance; may require card)
 
 This repo includes a `Dockerfile` and `fly.toml`.
@@ -107,11 +145,11 @@ This repo includes a `Dockerfile` and `fly.toml`.
      fly launch --no-deploy
      ```
 3. Set secrets (use JSON for Google credentials)
-     ```powershell
-     fly secrets set DISCORD_TOKEN=... GUILD_ID=... SPREADSHEET_ID=... SHEET_NAME=cekincki CEKINCKI_ROLE_PREFIX="Cekinčki:" SYNC_INTERVAL_SECONDS=300 NOTIFY_ON_CHANGE=true NOTIFY_MODE=dm
-     # Paste your service account JSON literally; PowerShell tip: enclose in single quotes
-     fly secrets set GCP_CREDENTIALS_JSON='{"type":"service_account","project_id":"...","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...@...iam.gserviceaccount.com","client_id":"...","token_uri":"https://oauth2.googleapis.com/token"}'
-     ```
+   ```powershell
+   fly secrets set DISCORD_TOKEN=... GUILD_ID=... SPREADSHEET_ID=... SHEET_NAME=cekincki CEKINCKI_ROLE_PREFIX="Cekinčki:" SYNC_INTERVAL_SECONDS=300 NOTIFY_ON_CHANGE=true NOTIFY_MODE=dm
+   # Paste your service account JSON literally; PowerShell tip: enclose in single quotes
+   fly secrets set GCP_CREDENTIALS_JSON='{"type":"service_account","project_id":"...","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...@...iam.gserviceaccount.com","client_id":"...","token_uri":"https://oauth2.googleapis.com/token"}'
+   ```
 4. Deploy
    ```powershell
    fly deploy
@@ -122,10 +160,11 @@ This repo includes a `Dockerfile` and `fly.toml`.
    ```
 
 Notes
+
 - Fly Machines run continuously; free allowances are limited. You can stop machines when not needed.
 - Ensure your Google Sheet is shared with the service account email as Editor.
 
-### Option B: Koyeb (free tier subject to change)
+### Option C: Koyeb (free tier subject to change)
 
 Koyeb can build from your GitHub repo with the provided `Dockerfile`.
 
