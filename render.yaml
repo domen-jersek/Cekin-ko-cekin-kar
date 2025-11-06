@@ -1,0 +1,27 @@
+services:
+  - type: worker
+    name: cekincki-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    region: frankfurt
+    envVars:
+      # Define these secrets in Render dashboard (Environment → Add Secret)
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: SPREADSHEET_ID
+        sync: false
+      - key: SHEET_NAME
+        value: cekincki
+      - key: CEKINCKI_ROLE_PREFIX
+        value: "Cekinčki:"
+      - key: SYNC_INTERVAL_SECONDS
+        value: "300"
+      - key: NOTIFY_ON_CHANGE
+        value: "true"
+      - key: NOTIFY_MODE
+        value: "dm"
+      - key: GCP_CREDENTIALS_JSON
+        sync: false
