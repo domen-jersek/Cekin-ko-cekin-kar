@@ -1,4 +1,13 @@
 require('dotenv').config();
+// Start optional HTTP keepalive server if running as a Web Service (e.g., Render)
+if (process.env.PORT || process.env.KEEPALIVE_HTTP === 'true') {
+  try {
+    const { startKeepAliveServer } = require('./keepalive');
+    startKeepAliveServer();
+  } catch (e) {
+    console.warn('[keepalive] Failed to start keepalive server:', e.message);
+  }
+}
 const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require('discord.js');
 const { bulkSyncMembers, upsertMemberRecord, readAll } = require('./sheets');
 const { getPrefix, applyMemberValueRole } = require('./roles');
